@@ -2,7 +2,7 @@
 ###################
 *.com
 *.class
-/bin/*.dll
+*.dll
 *.dll
 *.exe
 *.o
@@ -42,4 +42,4 @@ Thumbs.db
 ########################
 *.csv
 /Csv/*.*
-/Report/*.*
+/Report/*.rpt
