@@ -2,8 +2,6 @@
 ###################
 *.com
 *.class
-*.dll
-*.dll
 *.exe
 *.o
 *.so
@@ -41,5 +39,5 @@ Thumbs.db
 # Potential data files #
 ########################
 *.csv
-/Csv/*.*
+/Csv/*.csv
 /Report/*.rpt
