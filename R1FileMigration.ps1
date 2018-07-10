@@ -6,6 +6,9 @@
         [parameter(ParameterSetName='Sync',Mandatory=$true)]
         [parameter(ParameterSetName='Transfer',Mandatory=$true)]
         [String]$SQLHostName,
+        [parameter(ParameterSetName='Sync',Mandatory=$false)]
+        [parameter(ParameterSetName='Transfer',Mandatory=$false)]
+        [Switch]$Workspace,
         [parameter(ParameterSetName='Transfer',Mandatory = $false)]
         [Switch]$Transfer,
         [parameter(ParameterSetName='Transfer',Mandatory=$true)]
@@ -171,21 +174,78 @@
         }
 
         $cred = Get-Credential
+        # Only get selected workspaces if the workspace switch is set
+        
         # Get a list of all EDDS******* databases in the SQL instance
-
         try { $dbs = Get-SqlDatabase -ServerInstance $SQLHostName -Credential $cred | Where-Object { $_.Name -match 'EDD\D\d{7}$' } -ErrorAction Stop }
         catch {
             Write-Log "Unable to get the list of databases, check your SQL server host and credentials" "ERROR"
             Break
         }
         Write-Log "Successfully connected to SQL and gathered the list of databases" "INFO"
+        foreach ($db in $dbs) {
+            $dbName += $dbs.Name
+        }
+
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+
+        $form = New-Object System.Windows.Forms.Form
+        $form.Text = 'Data Entry Form'
+        $form.Size = New-Object System.Drawing.Size(300,800)
+        $form.StartPosition = 'CenterScreen'
+
+        $OKButton = New-Object System.Windows.Forms.Button
+        $OKButton.Location = New-Object System.Drawing.Point(75,720)
+        $OKButton.Size = New-Object System.Drawing.Size(75,23)
+        $OKButton.Text = 'OK'
+        $OKButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
+        $form.AcceptButton = $OKButton
+        $form.Controls.Add($OKButton)
+
+        $CancelButton = New-Object System.Windows.Forms.Button
+        $CancelButton.Location = New-Object System.Drawing.Point(150,720)
+        $CancelButton.Size = New-Object System.Drawing.Size(75,23)
+        $CancelButton.Text = 'Cancel'
+        $CancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+        $form.CancelButton = $CancelButton
+        $form.Controls.Add($CancelButton)
+
+        $label = New-Object System.Windows.Forms.Label
+        $label.Location = New-Object System.Drawing.Point(10,20)
+        $label.Size = New-Object System.Drawing.Size(280,20)
+        $label.Text = 'Please make a selection from the list below:'
+        $form.Controls.Add($label)
+
+        $listBox = New-Object System.Windows.Forms.Listbox
+        $listBox.Location = New-Object System.Drawing.Point(10,40)
+        $listBox.Size = New-Object System.Drawing.Size(260,20)
+
+        $listBox.SelectionMode = 'MultiExtended'
+
+        foreach ($db in $dbName) {
+            [void] $listBox.Items.Add($db)
+        }
+
+        $listBox.Height = 650
+        $form.Controls.Add($listBox)
+        $form.Topmost = $true
+
+        $result = $form.ShowDialog()
+
+        if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+            $dbs = $listBox.SelectedItems
+        }
+        else {
+            Break
+        }
     }
     
     function Sync { 
         
         # Function for syncing sql database to sqlite
        
-        foreach ($db in $dbs.Name) {
+        foreach ($db in $dbs) {
 
             # Check if Sync has run before
             $check = $slcon.CreateCommand()
@@ -283,7 +343,7 @@
         New-Item -Path "$PSScriptRoot\Csv\Inactive" -ItemType Directory -ErrorAction SilentlyContinue
 
         # Function for creating csv files
-        foreach ($db in $dbs.Name) {
+        foreach ($db in $dbs) {
 
             # Create a SQL query that gathers the necessary data from file table in each database
             $sqlQuery = "SELECT Location AS ""source-path"", 
