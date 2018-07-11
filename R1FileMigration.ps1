@@ -175,70 +175,73 @@
 
         $cred = Get-Credential
         # Only get selected workspaces if the workspace switch is set
-        
-        # Get a list of all EDDS******* databases in the SQL instance
-        try { $dbs = Get-SqlDatabase -ServerInstance $SQLHostName -Credential $cred | Where-Object { $_.Name -match 'EDD\D\d{7}$' } -ErrorAction Stop }
-        catch {
-            Write-Log "Unable to get the list of databases, check your SQL server host and credentials" "ERROR"
-            Break
-        }
-        Write-Log "Successfully connected to SQL and gathered the list of databases" "INFO"
         foreach ($db in $dbs) {
             $dbName += $dbs.Name
         }
+        if ($Workspace.IsPresent) {
+            Add-Type -AssemblyName System.Windows.Forms
+            Add-Type -AssemblyName System.Drawing
 
-        Add-Type -AssemblyName System.Windows.Forms
-        Add-Type -AssemblyName System.Drawing
+            $form = New-Object System.Windows.Forms.Form
+            $form.Text = 'Data Entry Form'
+            $form.Size = New-Object System.Drawing.Size(300,800)
+            $form.StartPosition = 'CenterScreen'
 
-        $form = New-Object System.Windows.Forms.Form
-        $form.Text = 'Data Entry Form'
-        $form.Size = New-Object System.Drawing.Size(300,800)
-        $form.StartPosition = 'CenterScreen'
+            $OKButton = New-Object System.Windows.Forms.Button
+            $OKButton.Location = New-Object System.Drawing.Point(75,720)
+            $OKButton.Size = New-Object System.Drawing.Size(75,23)
+            $OKButton.Text = 'OK'
+            $OKButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
+            $form.AcceptButton = $OKButton
+            $form.Controls.Add($OKButton)
 
-        $OKButton = New-Object System.Windows.Forms.Button
-        $OKButton.Location = New-Object System.Drawing.Point(75,720)
-        $OKButton.Size = New-Object System.Drawing.Size(75,23)
-        $OKButton.Text = 'OK'
-        $OKButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
-        $form.AcceptButton = $OKButton
-        $form.Controls.Add($OKButton)
+            $CancelButton = New-Object System.Windows.Forms.Button
+            $CancelButton.Location = New-Object System.Drawing.Point(150,720)
+            $CancelButton.Size = New-Object System.Drawing.Size(75,23)
+            $CancelButton.Text = 'Cancel'
+            $CancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+            $form.CancelButton = $CancelButton
+            $form.Controls.Add($CancelButton)
 
-        $CancelButton = New-Object System.Windows.Forms.Button
-        $CancelButton.Location = New-Object System.Drawing.Point(150,720)
-        $CancelButton.Size = New-Object System.Drawing.Size(75,23)
-        $CancelButton.Text = 'Cancel'
-        $CancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
-        $form.CancelButton = $CancelButton
-        $form.Controls.Add($CancelButton)
+            $label = New-Object System.Windows.Forms.Label
+            $label.Location = New-Object System.Drawing.Point(10,20)
+            $label.Size = New-Object System.Drawing.Size(280,20)
+            $label.Text = 'Please make a selection from the list below:'
+            $form.Controls.Add($label)
 
-        $label = New-Object System.Windows.Forms.Label
-        $label.Location = New-Object System.Drawing.Point(10,20)
-        $label.Size = New-Object System.Drawing.Size(280,20)
-        $label.Text = 'Please make a selection from the list below:'
-        $form.Controls.Add($label)
+            $listBox = New-Object System.Windows.Forms.Listbox
+            $listBox.Location = New-Object System.Drawing.Point(10,40)
+            $listBox.Size = New-Object System.Drawing.Size(260,20)
 
-        $listBox = New-Object System.Windows.Forms.Listbox
-        $listBox.Location = New-Object System.Drawing.Point(10,40)
-        $listBox.Size = New-Object System.Drawing.Size(260,20)
+            $listBox.SelectionMode = 'MultiExtended'
 
-        $listBox.SelectionMode = 'MultiExtended'
+            foreach ($db in $dbName) {
+                [void] $listBox.Items.Add($db)
+            }
 
-        foreach ($db in $dbName) {
-            [void] $listBox.Items.Add($db)
-        }
+            $listBox.Height = 650
+            $form.Controls.Add($listBox)
+            $form.Topmost = $true
 
-        $listBox.Height = 650
-        $form.Controls.Add($listBox)
-        $form.Topmost = $true
+            $result = $form.ShowDialog()
 
-        $result = $form.ShowDialog()
-
-        if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
-            $dbs = $listBox.SelectedItems
+            if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+                $dbs = $listBox.SelectedItems
+            }
+            else {
+                Break
+            }
         }
         else {
-            Break
+            # Get a list of all EDDS******* databases in the SQL instance
+            try { $dbs = Get-SqlDatabase -ServerInstance $SQLHostName -Credential $cred | Where-Object { $_.Name -match 'EDD\D\d{7}$' } -ErrorAction Stop }
+            catch {
+                Write-Log "Unable to get the list of databases, check your SQL server host and credentials" "ERROR"
+                Break
+            }
         }
+        Write-Log "Successfully connected to SQL and gathered the list of databases" "INFO"
+        
     }
     
     function Sync { 
