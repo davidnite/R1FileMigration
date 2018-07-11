@@ -7,8 +7,9 @@
         [parameter(ParameterSetName='Transfer',Mandatory=$true)]
         [String]$SQLHostName,
         [parameter(ParameterSetName='Sync',Mandatory=$false)]
-        [parameter(ParameterSetName='Transfer',Mandatory=$false)]
-        [Switch]$Workspace,
+        [String[]]$Workspace,
+        [parameter(ParameterSetName='Sync',Mandatory=$false)]
+        [Switch]$WorkspaceSelector,
         [parameter(ParameterSetName='Transfer',Mandatory = $false)]
         [Switch]$Transfer,
         [parameter(ParameterSetName='Transfer',Mandatory=$true)]
@@ -175,10 +176,10 @@
 
         $cred = Get-Credential
         # Only get selected workspaces if the workspace switch is set
-        foreach ($db in $dbs) {
-            $dbName += $dbs.Name
-        }
         if ($Workspace.IsPresent) {
+            $dbs = $Workspace
+        }
+        elseif ($WorkspaceSelector.IsPresent) {
             Add-Type -AssemblyName System.Windows.Forms
             Add-Type -AssemblyName System.Drawing
 
@@ -241,6 +242,10 @@
             }
         }
         Write-Log "Successfully connected to SQL and gathered the list of databases" "INFO"
+        # Remove the Name attribute from the array
+        foreach ($db in $dbs) {
+            $dbName += $dbs.Name
+        }
         
     }
     
